@@ -1,6 +1,10 @@
-# scf-converger-ml
+# OpenQP SCF-Converger ML
 
-SCF-converger **database** + **ML method-selector training** for OpenQP.
+SCF-converger **database** + **ML method-selector training** for
+**[OpenQP](https://github.com/Open-Quantum-Platform/openqp)** (Open Quantum Platform).
+
+> Companion data/ML repository for OpenQP — upstream code:
+> https://github.com/Open-Quantum-Platform/openqp
 
 Goal: learn which SCF converger (C-/E-/A-DIIS, SOSCF, TRAH) converges a given system in the
 fewest **Fock-equivalent builds** (regular + response), and ship a tiny distilled model that
