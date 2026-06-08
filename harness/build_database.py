@@ -84,16 +84,22 @@ def trah_micro_sum(txt):
             continue
         if not in_tbl:
             continue
+        s = ln.strip()
+        # The table ends only at its trailing dashed rule / SCF-convergence banner.
+        # Crucially do NOT end on interleaved 'DFT XC integration time' or '===='
+        # lines (DFT runs print XC timing between macro rows) -- ending there would
+        # silently zero the micro count for every DFT TRAH cell.
+        if s.startswith("---") or "SCF convergence" in ln or ("Final" in ln and "energy" in ln):
+            in_tbl = False
+            continue
         tok = ln.split()
         if len(tok) >= 7:                       # data row: idx E |grad| rho trust micro step
             try:
                 int(tok[0]); float(tok[1]); total += int(tok[5])
             except (ValueError, IndexError):
                 pass
-        elif "CONVERGED" in ln:                  # converged macro: 0 micro
-            continue
-        elif tok and not tok[0].lstrip("-").isdigit() and "=" not in ln:
-            in_tbl = False                       # table ended
+        # '===' separators, 'DFT XC integration time', 'CONVERGED' rows, blanks:
+        # ignore but stay in the table.
     return total
 
 
