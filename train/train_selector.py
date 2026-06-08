@@ -62,8 +62,12 @@ def main():
     feat = {}
     for r in rows:
         key = (r["system"], r["ref"], r["func"])
-        if r["converged"] == "True" and int(r["niter"]) > 0:
-            cells[key][r["converger"]] = int(r["niter"])
+        if r["converged"] == "True" and int(float(r["niter"])) > 0:
+            # Cost = true Fock-equivalent builds when present (TRAH's response/micro
+            # builds counted), else fall back to niter for older contributed DBs.
+            fb = r.get("fock_builds", "")
+            cost = int(float(fb)) if fb not in (None, "", "-1") else int(float(r["niter"]))
+            cells[key][r["converger"]] = cost
         feat.setdefault(key, features(r, a.geom))
     X, y, keys = [], [], []
     for k, cc in cells.items():

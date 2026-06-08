@@ -68,6 +68,35 @@ def make_inp(root, s, ref, mult, func, c, wd):
     return p
 
 
+def trah_micro_sum(txt):
+    """Sum the 'micro' column of every TRAH macro table in the log.
+
+    The native TRAH macro table is
+        Macro  Energy  |grad|  rho  trust  micro  step
+    and each micro-iteration is one Hessian-vector (response) Fock build. niter
+    only counts macro iterations, so it UNDERCOUNTS TRAH's true cost by exactly
+    this sum -- which is why labeling by niter wrongly favors TRAH.
+    """
+    total, in_tbl = 0, False
+    for ln in txt.splitlines():
+        if "Macro" in ln and "micro" in ln:
+            in_tbl = True
+            continue
+        if not in_tbl:
+            continue
+        tok = ln.split()
+        if len(tok) >= 7:                       # data row: idx E |grad| rho trust micro step
+            try:
+                int(tok[0]); float(tok[1]); total += int(tok[5])
+            except (ValueError, IndexError):
+                pass
+        elif "CONVERGED" in ln:                  # converged macro: 0 micro
+            continue
+        elif tok and not tok[0].lstrip("-").isdigit() and "=" not in ln:
+            in_tbl = False                       # table ended
+    return total
+
+
 def run_cell(root, s, ref, mult, func, c, wd, omp):
     inp = make_inp(root, s, ref, mult, func, c, wd)
     log = inp[:-4] + ".log"
@@ -76,14 +105,20 @@ def run_cell(root, s, ref, mult, func, c, wd, omp):
     try:
         subprocess.run(["openqp", inp], cwd=wd, env=env, capture_output=True, timeout=2400)
     except subprocess.TimeoutExpired:
-        return dict(converged=False, niter=-1, time=round(time.time() - t, 2), E="nan")
+        return dict(converged=False, niter=-1, micro=-1, fock_builds=-1,
+                    time=round(time.time() - t, 2), E="nan")
     dt = time.time() - t
     txt = open(log).read() if os.path.exists(log) else ""
     es = re.findall(r"energy is\s+(-?\d+\.\d+)\s+after\s+(\d+)\s+iterations", txt)
     conv = "convergence achieved" in txt
     niter = sum(int(n) for _, n in es) if es else -1
     E = es[-1][0] if es else "nan"
-    return dict(converged=conv, niter=niter, time=round(dt, 2), E=E)
+    # True Fock-equivalent cost: each SCF iteration is ~1 Fock build; TRAH adds one
+    # response build per micro-iteration. DIIS/SOSCF: micro=0 so fock_builds==niter.
+    micro = trah_micro_sum(txt) if c == "trah" else 0
+    fock_builds = (niter + micro) if niter > 0 else -1
+    return dict(converged=conv, niter=niter, micro=micro, fock_builds=fock_builds,
+                time=round(dt, 2), E=E)
 
 
 def main():
@@ -95,7 +130,7 @@ def main():
     wd = os.path.join(root, "results", "database"); os.makedirs(wd, exist_ok=True)
     csv_path = os.path.join(wd, "db.csv")
     fields = ["system", "tier", "ref", "mult", "func", "converger", "natom", "charge",
-              "converged", "niter", "time", "E"]
+              "converged", "niter", "micro", "fock_builds", "time", "E"]
     done = set()
     if os.path.exists(csv_path):
         for r in csv.DictReader(open(csv_path)):
