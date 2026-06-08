@@ -37,10 +37,15 @@ def features(r, geomdir):
     mult = _int(r, "mult", 1)
     tm = r.get("transition_metal")
     tm = int(tm) if (tm not in (None, "")) else has_tm(r["system"], geomdir)
+    ref = (r.get("ref", "rhf") or "rhf").lower()
     return {
         "natom": _int(r, "natom"), "charge": _int(r, "charge"), "mult": mult,
         "is_dft": 0 if r.get("func", "hf") in ("hf", "") else 1,
-        "open_shell": 1 if (r.get("ref", "rhf") != "rhf" or mult > 1) else 0,
+        "open_shell": 1 if (ref != "rhf" or mult > 1) else 0,
+        # Distinguish the SCF reference: ROHF and UHF converge differently, and
+        # ROHF (ROKS) is the MRSF-TDDFT reference, so it gets its own feature.
+        "is_rohf": 1 if ref == "rohf" else 0,
+        "is_uhf": 1 if ref == "uhf" else 0,
         "transition_metal": tm,
     }
 
