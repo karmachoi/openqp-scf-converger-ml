@@ -1,0 +1,31 @@
+name: train-selector
+# Auto-retrain the SCF method-selector whenever data changes (a contribution is merged),
+# or on demand / weekly. Commits the refreshed distilled model back to the repo.
+on:
+  push:
+    paths: ["data/**", "train/**", "geometries/**"]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1"   # weekly Monday 06:00 UTC
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -q scikit-learn numpy
+      - name: Train + distill model
+        run: |
+          python train/train_selector.py --db "data/*.csv" "data/contrib/*.csv" \
+            --geom geometries --out model/scf_selector_model.py | tee model/metrics.txt
+      - name: Commit refreshed model
+        run: |
+          git config user.name  "scf-ml-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add model/scf_selector_model.py model/metrics.txt
+          git diff --cached --quiet || git commit -m "auto: retrain selector on new data [skip ci]"
+          git push
