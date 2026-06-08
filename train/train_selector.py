@@ -52,8 +52,11 @@ def features(r, geomdir):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--db", nargs="*", default=["data/*.csv", "data/contrib/*.csv"],
-                    help="CSV files or globs; all are unioned (DB + every contribution)")
+    ap.add_argument("--db", nargs="*",
+                    default=["data/db_openqp_postfix.csv", "data/contrib/*.csv"],
+                    help="CSV files or globs, unioned: the canonical post-fix OpenQP DB "
+                         "(true Fock-cost labels) plus community contributions. Obsolete/"
+                         "different-schema studies live in data/studies/ and are excluded.")
     ap.add_argument("--geom", default="geometries")
     ap.add_argument("--out", default="model/scf_selector_model.py")
     a = ap.parse_args()

@@ -30,9 +30,15 @@ this repository and used to train the shipped selector.
 ## Layout
 ```
 data/        databases (the training data; large CSVs live here, NOT in the openqp repo)
-  db_pyscf_methods.csv   10,890 cells: PySCF, method comparison + noise-robustness study
-  db_openqp_*.csv        OpenQP per-converger DB (cdiis/ediis/adiis/soscf/trah), true cost
-harness/     data generation (build_database.py, slurm_cell.py, ensemble_scf_proto.py, systems.py)
+  db_openqp_postfix.csv  CANONICAL training DB: OpenQP per-converger costs
+                         (cdiis/ediis/adiis/soscf/trah) with true Fock-equivalent
+                         cost (niter + TRAH micro/response builds). This is what the
+                         selector trains on.
+  contrib/               community-contributed OpenQP DBs (same schema), also trained on.
+  studies/               reference-only, NOT used for selector training:
+    db_pyscf_methods.csv   10,890 cells: PySCF method + noise-robustness study
+    db_openqp_prefix.csv   obsolete pre-fix OpenQP DB (niter-only; superseded)
+harness/     data generation (build_database.py, reparse_fock.py, ensemble_scf_proto.py, systems.py)
 geometries/  the 24-system tier-0..3 benchmark geometries
 train/       train_selector.py -> trains + distills to model/scf_selector_model.py
 model/       scf_selector_model.py  (distilled plain-Python predict(); copied into pyoqp)
